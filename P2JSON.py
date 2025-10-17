@@ -187,10 +187,11 @@ Output ONLY valid JSON, no extra text, no markdown fences (```json).
 
         # Download PDF Button
         st.download_button(
-            label="Download Receipt as PDF (Invoice No.)",
-            data=pdf_buffer,
-            file_name=pdf_filename,
-            mime="application/pdf"
+            "📄 Download Receipt as PDF", pdf_buffer, f"{invoice_number}.pdf", mime="application/pdf"
+            #label="Download Receipt as PDF (Invoice No.)",
+            #data=pdf_buffer,
+            #file_name=pdf_filename,
+            #mime="application/pdf"
         )
         
         # Download JSON Button (Move your existing download button here)
