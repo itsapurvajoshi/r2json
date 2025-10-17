@@ -159,15 +159,58 @@ Output ONLY valid JSON, no extra text, no markdown fences (```json).
     # Retrieve from cache (or just extracted)
 
     data = st.session_state.extracted_data.get(image_hash)
+    
+    # ----------------------------------------------------
+    # NEW FEATURE LOGIC: Prepare PDF download
+    # ----------------------------------------------------
+    
+    # 1. Get the invoice number, safely handling case where it might be missing
+    invoice_number = data.get("invoice_number", "Unidentified_Invoice")
+    
+    # 2. Format the filename
+    pdf_filename = f"{invoice_number}.pdf"
+    
+    # 3. Create a BytesIO buffer to store the PDF data
+    pdf_buffer = io.BytesIO()
+    
+    # 4. Save the current image to the buffer as a PDF
+    # The 'image' variable holds the PIL Image object (either from JPG/PNG or converted from PDF)
+    try:
+        image.save(pdf_buffer, format="PDF")
+        pdf_buffer.seek(0) # Rewind the buffer to the start
+        
+        # ----------------------------------------------------
+        # Streamlit Output and Download Buttons
+        # ----------------------------------------------------
+        st.subheader("Extracted JSON:")
+        st.json(data)
 
-    st.subheader("Extracted JSON:")
-    st.json(data)
-    copy_button = st.button("Copy JSON to clipboard")
-    if copy_button:
-        json_str = json.dumps(data, indent=2)
-        from st_clipboard import copy_to_clipboard  # Import here to avoid conflicts
-        copy_to_clipboard(json_str)
-        st.success("JSON copied to clipboard!")
-    st.download_button("Download JSON", json.dumps(data, indent=2), "receipt.json")
+        # Download PDF Button
+        st.download_button(
+            label="Download Receipt as PDF (Invoice No.)",
+            data=pdf_buffer,
+            file_name=pdf_filename,
+            mime="application/pdf"
+        )
+        
+        # Download JSON Button (Move your existing download button here)
+        st.download_button(
+            "Download JSON", 
+            json.dumps(data, indent=2), 
+            "receipt.json"
+        )
+
+        # Copy JSON Button (Keep your clipboard logic here)
+        copy_button = st.button("Copy JSON to clipboard")
+        if copy_button:
+            json_str = json.dumps(data, indent=2)
+            # You need the st_clipboard import here if you didn't put it at the top
+            from st_clipboard import copy_to_clipboard 
+            copy_to_clipboard(json_str)
+            st.success("JSON copied to clipboard!")
+        
+    except Exception as e:
+        st.error(f"Error creating PDF: {e}")
+
 else:
-    st.info("Please provide an image to start.")
+    st.info("Please provide an image or PDF to start.")
