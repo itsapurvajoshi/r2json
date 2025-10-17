@@ -74,9 +74,10 @@ elif uploaded_file is not None:
             # Load PDF from bytes
             pdf = pdfium.PdfDocument(uploaded_data)
             # Render the first page (index 0) to a PIL Image object at 300 DPI
-            page = pdf.get_page(0)
-            image = page.render_topil(scale=300/72) 
-            page.close()
+            for i in range(len(pdf)):
+                page = pdf.get_page(i)
+                image = page.render_topil(scale=300/72) 
+                page.close()
             pdf.close()
             st.warning("Processed first page of the PDF.")
         except Exception as e:
