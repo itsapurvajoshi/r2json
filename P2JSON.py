@@ -216,7 +216,7 @@ Output ONLY valid JSON, no extra text, no markdown fences (```json).
                 st.session_state.extracted_data[image_hash] = data
             except json.JSONDecodeError:
                 st.error("Extraction failed—try a clearer image. Raw response: " + extracted_json)
-                st.stop()  # Halt if extraction fails
+                st.stop() # Halt if extraction fails
 
         # Retrieve from cache (or just extracted)
         data = st.session_state.extracted_data.get(image_hash)
