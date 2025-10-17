@@ -2,3 +2,4 @@ streamlit
 google-generativeai
 Pillow
 st-clipboard
+pypdfium2

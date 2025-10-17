@@ -4,6 +4,7 @@ import json
 from PIL import Image
 import io
 import hashlib
+import pypdfium2 as pdfium  
 
 # Configure Gemini (replace with your API key)
 genai.configure(api_key="AIzaSyAs9nSWf9tFCQNitvPcbuWDfMXaiTYXElQ")
@@ -24,8 +25,8 @@ with col1:
     with upload_container:
         uploaded_file = st.file_uploader(
             "Choose a receipt image", 
-            type=['jpg', 'jpeg', 'png'], 
-            help="Limit 200MB per file. JPG, JPEG, PNG",
+            type=['jpg', 'jpeg', 'png', 'pdf'], # <-- ADD 'pdf'
+            help="Limit 200MB per file. JPG, JPEG, PNG, or PDF",
             label_visibility="collapsed"  # Hides the default label to focus on drag-drop
         )
 
@@ -55,19 +56,45 @@ with col2:
 # Process image if available (prioritize camera if both)
 image = None
 image_hash = None
+uploaded_data = None
+
 if st.session_state.camera_image is not None:
-    image = Image.open(io.BytesIO(st.session_state.camera_image.getvalue()))
-    # Compute hash for caching
-    img_bytes = io.BytesIO()
-    image.save(img_bytes, format='PNG')
-    image_hash = hashlib.md5(img_bytes.getvalue()).hexdigest()
+    # Handle Camera Input
+    uploaded_data = st.session_state.camera_image.getvalue()
+    image = Image.open(io.BytesIO(uploaded_data))
+    
 elif uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    # Compute hash for caching
+    # Handle Uploaded File
+    uploaded_data = uploaded_file.getvalue()
+    
+    if uploaded_file.type == "application/pdf":
+        # --- PDF CONVERSION LOGIC ---
+        try:
+            # Load PDF from bytes
+            pdf = pdfium.PdfDocument(uploaded_data)
+            # Render the first page (index 0) to a PIL Image object at 300 DPI
+            page = pdf.get_page(0)
+            image = page.render_topil(scale=300/72) 
+            page.close()
+            pdf.close()
+            st.warning("Processed first page of the PDF.")
+        except Exception as e:
+            st.error(f"Could not process PDF: {e}")
+            st.stop()
+        # --- END PDF CONVERSION LOGIC ---
+        
+    else:
+        # Handle regular image file (jpg/png)
+        image = Image.open(io.BytesIO(uploaded_data))
+
+# Now, compute the hash for the final image if it exists
+if image:
+    # Compute hash for caching on the rendered image
     img_bytes = io.BytesIO()
-    image.save(img_bytes, format='PNG')
+    image.save(img_bytes, format='PNG') # Save as PNG for consistent hashing
     image_hash = hashlib.md5(img_bytes.getvalue()).hexdigest()
 
+# --- CONTINUE WITH THE REST OF YOUR ORIGINAL CODE (st.image, st.spinner, etc.) ---
 if image:
     st.image(image, caption="Uploaded/Captured Receipt", width=400)
 
