@@ -67,20 +67,38 @@ elif uploaded_file is not None:
     # Handle Uploaded File
     uploaded_data = uploaded_file.getvalue()
     
-    if uploaded_file.type == "application/pdf":
-        # --- PDF CONVERSION LOGIC ---
-        try:
-            # Load PDF from bytes
-            pdf = pdfium.PdfDocument(uploaded_data)
-            # Render the first page (index 0) to a PIL Image object at 300 DPI
-            page = pdf.get_page(0)
-            image = page.render_topil(scale=300/72) 
+if uploaded_file.type == "application/pdf":
+    # --- PDF MULTI-PAGE CONVERSION LOGIC ---
+    try:
+        pdf = pdfium.PdfDocument(uploaded_data)
+        images = []
+        
+        # Loop through all pages
+        for i in range(len(pdf)):
+            page = pdf.get_page(i)
+            img = page.render_topil(scale=300/72)
+            images.append(img)
             page.close()
-            pdf.close()
-            st.warning("Processed first page of the PDF.")
-        except Exception as e:
-            st.error(f"Could not process PDF: {e}")
-            st.stop()
+
+        pdf.close()
+
+        # Combine vertically into one tall image
+        widths, heights = zip(*(i.size for i in images))
+        total_height = sum(heights)
+        max_width = max(widths)
+        
+        combined_image = Image.new("RGB", (max_width, total_height), color=(255, 255, 255))
+        y_offset = 0
+        for img in images:
+            combined_image.paste(img, (0, y_offset))
+            y_offset += img.height
+        
+        image = combined_image
+        st.success(f"Processed all {len(images)} pages of the PDF.")
+        
+    except Exception as e:
+        st.error(f"Could not process PDF: {e}")
+        st.stop()
         # --- END PDF CONVERSION LOGIC ---
         
     else:
