@@ -76,7 +76,7 @@ elif uploaded_file is not None:
             # Render the first page (index 0) to a PIL Image object at 300 DPI
             for i in range(len(pdf)):
                 page = pdf.get_page(i)
-                image = page.render_topil(scale=300/72) 
+                image = page.render_to(scale=300/72) 
                 page.close()
             pdf.close()
             st.warning("Processed first page of the PDF.")
