@@ -1,5 +1,5 @@
 streamlit
-google-genai     
+google-genai      # The package that provides the google.generativeai module
 Pillow
 pypdfium2
 st-clipboard
