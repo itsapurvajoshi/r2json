@@ -178,14 +178,99 @@ Output ONLY valid JSON, no extra text, no markdown fences (```json).
 
     st.subheader("Extracted JSON:")
     st.json(data)
-    copy_button = st.button("Copy JSON to clipboard")
-    if copy_button:
-        json_str = json.dumps(data, indent=2)
-        from st_clipboard import copy_to_clipboard  # Import here to avoid conflicts
-        copy_to_clipboard(json_str)
-        st.success("JSON copied to clipboard!")
-    st.download_button("Download JSON", json.dumps(data, indent=2), "receipt.json")
+    # --- CONTINUE FROM: # Now, compute the hash for the final image if it exists ---
+
+if image:
+    # Compute hash for caching on the rendered image
+    img_bytes = io.BytesIO()
+    image.save(img_bytes, format='PNG') # Save as PNG for consistent hashing
+    image_hash = hashlib.md5(img_bytes.getvalue()).hexdigest()
+
+    st.image(image, caption="Uploaded/Captured Receipt", width=400)
+
+    # Check cache or extract (Extraction logic remains here)
+    if 'extracted_data' not in st.session_state:
+        st.session_state.extracted_data = {}
+    
+    if image_hash and image_hash not in st.session_state.extracted_data:
+        # ... (Your prompt and Gemini extraction code is here) ...
+        # (I'm keeping this section condensed for brevity, but leave your code here)
+        
+        # Prompt for structured JSON extraction
+        prompt = """... (your long prompt text) ...""" 
+
+        with st.spinner("Extracting data..."):
+            response = model.generate_content([prompt, image])
+            extracted_json = response.text.strip()
+
+        try:
+            # Robust stripping... (Your JSON parsing/stripping logic remains here)
+            if extracted_json.startswith('```json'):
+                extracted_json = extracted_json.replace('```json', '').replace('```', '').strip()
+            elif extracted_json.startswith('```'):
+                extracted_json = extracted_json.replace('```', '').strip()
+            extracted_json = extracted_json.lstrip('>json ').lstrip('json ').strip()
+
+            # Parse and cache JSON
+            data = json.loads(extracted_json)
+            st.session_state.extracted_data[image_hash] = data
+        except json.JSONDecodeError:
+            st.error("Extraction failed—try a clearer image. Raw response: " + extracted_json)
+            st.stop()  # Halt if extraction fails
+
+    # Retrieve from cache (or just extracted)
+    data = st.session_state.extracted_data.get(image_hash)
+
+    # ----------------------------------------------------
+    # NEW FEATURE LOGIC: Prepare PDF download 🚀
+    # ----------------------------------------------------
+    
+    # 1. Get the invoice number, safely handling case where it might be missing
+    invoice_number = data.get("invoice_number", "Unidentified_Invoice")
+    
+    # 2. Format the filename (clean up spaces/slashes for better file naming)
+    safe_invoice_number = str(invoice_number).replace('/', '_').replace('\\', '_').strip()
+    pdf_filename = f"{safe_invoice_number}.pdf"
+    
+    # 3. Create a BytesIO buffer to store the PDF data
+    pdf_buffer = io.BytesIO()
+    
+    # 4. Save the current image to the buffer as a PDF
+    try:
+        # The 'image' variable holds the PIL Image object
+        image.save(pdf_buffer, format="PDF")
+        pdf_buffer.seek(0) # Rewind the buffer to the start
+        
+        st.subheader("Extracted JSON:")
+        st.json(data)
+
+        # Download PDF Button (The new feature)
+        st.download_button(
+            label="Download Receipt as PDF (Invoice No.)",
+            data=pdf_buffer,
+            file_name=pdf_filename,
+            mime="application/pdf"
+        )
+        
+        # Download JSON Button
+        st.download_button(
+            "Download JSON", 
+            json.dumps(data, indent=2), 
+            "receipt.json"
+        )
+
+        # Copy JSON Button 
+        copy_button = st.button("Copy JSON to clipboard")
+        if copy_button:
+            json_str = json.dumps(data, indent=2)
+            from st_clipboard import copy_to_clipboard
+            copy_to_clipboard(json_str)
+            st.success("JSON copied to clipboard!")
+        
+    except Exception as e:
+        st.error(f"Error creating PDF: {e}")
+
 else:
-    st.info("Please provide an image to start.")
+    st.info("Please provide an image or PDF to start.") 
 
     
