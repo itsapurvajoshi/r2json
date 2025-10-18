@@ -64,22 +64,31 @@ if st.session_state.camera_image is not None:
     uploaded_data = st.session_state.camera_image.getvalue()
     image = Image.open(io.BytesIO(uploaded_data))
     
+if st.session_state.camera_image is not None:
+    uploaded_data = st.session_state.camera_image.getvalue()
+    image = Image.open(io.BytesIO(uploaded_data))
 elif uploaded_file is not None:
-    # Handle Uploaded File
     uploaded_data = uploaded_file.getvalue()
     
     if uploaded_file.type == "application/pdf":
-        # --- PDF CONVERSION LOGIC ---
+        # --- PDF MULTI-PAGE CONVERSION LOGIC ---
         try:
-            # Load PDF from bytes
             pdf = pdfium.PdfDocument(uploaded_data)
-            # Render the first page (index 0) to a PIL Image object at 300 DPI
+            images = []
+            
+            # Loop through all pages and render
             for i in range(len(pdf)):
                 page = pdf.get_page(i)
-                image = page.render_to(scale=300/72) 
+                # FIX 2: Correct rendering function
+                img = page.render(scale=300/72).to_pil() 
+                images.append(img)
                 page.close()
-            pdf.close()
-            st.warning("Processed first page of the PDF.")
+
+            # ... (rest of PDF combining logic) ...
+            
+            # This is where your combined_image is created
+            image = combined_image 
+            st.success(f"Processed and combined all {len(images)} pages of the PDF.")
         except Exception as e:
             st.error(f"Could not process PDF: {e}")
             st.stop()
