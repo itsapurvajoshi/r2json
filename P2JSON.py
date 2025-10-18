@@ -79,21 +79,34 @@ elif uploaded_file is not None:
             # Loop through all pages and render
             for i in range(len(pdf)):
                 page = pdf.get_page(i)
-                # FIX 2: Correct rendering function
+                # Corrected pypdfium2 function
                 img = page.render(scale=300/72).to_pil() 
                 images.append(img)
                 page.close()
 
-            # ... (rest of PDF combining logic) ...
+            pdf.close()
+
+            # Combine vertically into one tall image
+            widths, heights = zip(*(i.size for i in images))
+            total_height = sum(heights)
+            max_width = max(widths)
             
-            # This is where your combined_image is created
+            # This line defines combined_image:
+            combined_image = Image.new("RGB", (max_width, total_height), color=(255, 255, 255))
+            y_offset = 0
+            for img in images:
+                combined_image.paste(img, (0, y_offset))
+                y_offset += img.height
+            
+            # Assign the resulting image to the main 'image' variable
             image = combined_image 
             st.success(f"Processed and combined all {len(images)} pages of the PDF.")
+        
         except Exception as e:
+            # If the PDF processing fails, 'image' remains None, 
+            # and the error is displayed.
             st.error(f"Could not process PDF: {e}")
             st.stop()
-        # --- END PDF CONVERSION LOGIC ---
-        
     else:
         # Handle regular image file (jpg/png)
         image = Image.open(io.BytesIO(uploaded_data))
